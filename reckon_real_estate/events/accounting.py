@@ -2,6 +2,17 @@ import frappe
 
 
 def sync_payment_entry(doc, method=None):
+    if doc.docstatus == 2:
+        # Payment Entry is already cancelled in the database at on_cancel time.
+        # Use the reverse link as well: older payments may lack collection_entry.
+        # Normal cancel() preserves permissions, validations and transaction rollback.
+        for name in frappe.get_all(
+            "Collection Entry", filters={"payment_entry": doc.name, "docstatus": 1}, pluck="name"
+        ):
+            collection = frappe.get_doc("Collection Entry", name)
+            collection.cancel()
+            collection.db_set("accounting_status", "Cancelled")
+
     if doc.meta.has_field("collection_entry") and doc.collection_entry:
         status = "Posted" if doc.docstatus == 1 else "Cancelled" if doc.docstatus == 2 else "Draft Payment"
         frappe.db.set_value("Collection Entry", doc.collection_entry, "accounting_status", status)

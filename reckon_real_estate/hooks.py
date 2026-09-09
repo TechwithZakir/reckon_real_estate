@@ -39,3 +39,7 @@ scheduler_events = {
 }
 
 fixtures = []
+
+doctype_js = {
+    "Payment Entry": "public/js/payment_entry.js",
+}
