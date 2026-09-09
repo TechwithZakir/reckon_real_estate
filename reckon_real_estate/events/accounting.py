@@ -1,6 +1,31 @@
 import frappe
 
 
+def unlink_cancelled_collection(doc, method=None):
+    _unlink_cancelled_references(doc, "Collection Entry", "payment_entry")
+
+
+def unlink_cancelled_payment(doc, method=None):
+    if frappe.get_meta("Payment Entry").has_field("collection_entry"):
+        _unlink_cancelled_references(doc, "Payment Entry", "collection_entry")
+
+
+def _unlink_cancelled_references(doc, doctype, fieldname):
+    """Break the collection/payment cycle only when both records are cancelled."""
+    if doc.docstatus != 2:
+        return
+    # on_trash runs before Frappe's link checks, inside the deletion transaction.
+    # Other links still block deletion; an error rolls these changes back too.
+    for name in frappe.get_all(
+        doctype, filters={fieldname: doc.name, "docstatus": 2}, pluck="name"
+    ):
+        linked = frappe.get_doc(doctype, name)
+        linked.check_permission("write")
+        frappe.db.set_value(
+            doctype, {"name": name, fieldname: doc.name, "docstatus": 2}, fieldname, None
+        )
+
+
 def sync_payment_entry(doc, method=None):
     if doc.docstatus == 2:
         # Payment Entry is already cancelled in the database at on_cancel time.

@@ -23,12 +23,16 @@ doc_events = {
         "on_update": "reckon_real_estate.events.customer.sync_customer"
     },
     "Payment Entry": {
+        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_collection",
         "on_submit": "reckon_real_estate.events.accounting.sync_payment_entry",
         "on_cancel": "reckon_real_estate.events.accounting.sync_payment_entry",
     },
     "Purchase Invoice": {
         "on_submit": "reckon_real_estate.events.accounting.sync_purchase_invoice",
         "on_cancel": "reckon_real_estate.events.accounting.sync_purchase_invoice",
+    },
+    "Collection Entry": {
+        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_payment",
     },
 }
 
