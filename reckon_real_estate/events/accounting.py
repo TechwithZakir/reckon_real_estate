@@ -19,22 +19,36 @@ def unlink_cancelled_sales_invoice(doc, method=None):
 
 def unlink_cancelled_invoice_references(doc, method=None):
     _unlink_cancelled_references(doc, "Installment Plan", "sales_invoice")
+    _unlink_cancelled_child_references(doc, "Installment Schedule", "Installment Plan", "sales_invoice")
+    _unlink_cancelled_child_references(doc, "Payment Allocation", "Collection Entry", "sales_invoice")
+
+
+def unlink_cancelled_plan_references(doc, method=None):
+    unlink_cancelled_sales_invoice(doc)
+    _unlink_cancelled_references(doc, "Collection Entry", "installment_plan")
+    if frappe.get_meta("Payment Entry").has_field("installment_plan"):
+        _unlink_cancelled_references(doc, "Payment Entry", "installment_plan")
+    _unlink_cancelled_child_references(doc, "Payment Allocation", "Collection Entry", "installment_plan")
+
+
+def unlink_cancelled_agreement_references(doc, method=None):
+    _unlink_cancelled_references(doc, "Installment Plan", "sales_agreement")
+    if frappe.get_meta("Sales Invoice").has_field("sales_agreement"):
+        _unlink_cancelled_references(doc, "Sales Invoice", "sales_agreement")
+
+
+def _unlink_cancelled_child_references(doc, childtype, parenttype, fieldname):
     if doc.docstatus != 2:
         return
-    # Child links must be cleared too, but only on cancelled parent documents.
-    for childtype, parenttype in (
-        ("Installment Schedule", "Installment Plan"),
-        ("Payment Allocation", "Collection Entry"),
+    for row in frappe.get_all(
+        childtype, filters={fieldname: doc.name, "parenttype": parenttype},
+        fields=["name", "parent"],
     ):
-        for row in frappe.get_all(
-            childtype, filters={"sales_invoice": doc.name, "parenttype": parenttype},
-            fields=["name", "parent"],
-        ):
-            parent = frappe.get_doc(parenttype, row.parent)
-            if parent.docstatus != 2:
-                continue
-            parent.check_permission("write")
-            frappe.db.set_value(childtype, row.name, "sales_invoice", None)
+        parent = frappe.get_doc(parenttype, row.parent)
+        if parent.docstatus != 2:
+            continue
+        parent.check_permission("write")
+        frappe.db.set_value(childtype, row.name, fieldname, None)
 
 
 def unlink_cancelled_collection(doc, method=None):
@@ -47,7 +61,7 @@ def unlink_cancelled_payment(doc, method=None):
 
 
 def _unlink_cancelled_references(doc, doctype, fieldname):
-    """Break the collection/payment cycle only when both records are cancelled."""
+    """Clear a reference only when both records are cancelled."""
     if doc.docstatus != 2:
         return
     # on_trash runs before Frappe's link checks, inside the deletion transaction.

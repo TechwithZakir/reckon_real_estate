@@ -103,3 +103,33 @@ class TestPaymentDeletion(unittest.TestCase):
             self.frappe.get_all.side_effect = [[], [SimpleNamespace(name="ROW-1", parent="PLAN-1")], []]
             self.module.unlink_cancelled_invoice_references(self.doc)
         self.frappe.db.set_value.assert_not_called()
+
+
+    def test_agreement_deletion_unlinks_cancelled_plans_and_invoices(self):
+        self.module.unlink_cancelled_agreement_references(self.doc)
+        for doctype in ("Installment Plan", "Sales Invoice"):
+            self.frappe.db.set_value.assert_any_call(
+                doctype, {"name": "LINK-1", "sales_agreement": "SOURCE-1", "docstatus": 2},
+                "sales_agreement", None,
+            )
+
+    def test_plan_deletion_clears_all_cancelled_real_estate_references(self):
+        self.linked.docstatus = 2
+        self.frappe.get_all.side_effect = [
+            ["INV-1"], ["CE-1"], ["PE-1"], [SimpleNamespace(name="ROW-1", parent="CE-1")],
+        ]
+        self.module.unlink_cancelled_plan_references(self.doc)
+        for doctype, name in (("Sales Invoice", "INV-1"), ("Collection Entry", "CE-1"), ("Payment Entry", "PE-1")):
+            self.frappe.db.set_value.assert_any_call(
+                doctype, {"name": name, "installment_plan": "SOURCE-1", "docstatus": 2},
+                "installment_plan", None,
+            )
+        self.frappe.db.set_value.assert_any_call("Payment Allocation", "ROW-1", "installment_plan", None)
+
+    def test_active_source_plan_or_agreement_does_not_unlink(self):
+        for status in (0, 1):
+            self.doc.docstatus = status
+            self.module.unlink_cancelled_plan_references(self.doc)
+            self.module.unlink_cancelled_agreement_references(self.doc)
+        self.frappe.get_all.assert_not_called()
+        self.frappe.db.set_value.assert_not_called()

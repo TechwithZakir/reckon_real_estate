@@ -38,8 +38,11 @@ doc_events = {
         "on_cancel": "reckon_real_estate.events.accounting.cancel_invoice_plans",
         "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_invoice_references",
     },
+    "Sales Agreement": {
+        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_agreement_references",
+    },
     "Installment Plan": {
-        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_sales_invoice",
+        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_plan_references",
     },
 }
 
