@@ -10,6 +10,7 @@
     "booking_no",
     "details_section",
     "customer",
+    "sales_person",
     "project",
     "unit",
     "booking_date",
@@ -27,6 +28,13 @@
     "amended_from"
   ],
   "fields": [
+    {
+      "fieldname": "sales_person",
+      "fieldtype": "Link",
+      "label": "Sales Person",
+      "options": "Sales Person",
+      "description": "Used on new invoices with 100% sales contribution and the Sales Person's commission rate."
+    },
     {
       "fieldname": "record_title",
       "label": "Name",

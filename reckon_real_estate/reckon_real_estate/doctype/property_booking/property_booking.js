@@ -1,5 +1,6 @@
 frappe.ui.form.on("Property Booking", {
     setup(frm) {
+        frm.set_query("sales_person", () => ({filters: {enabled: 1, is_group: 0}}));
         frm.set_query("project", () => ({filters: {status: "Active", docstatus: 1}}));
         frm.set_query("unit", () => ({filters: {
             project: frm.doc.project || "",

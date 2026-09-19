@@ -122,6 +122,8 @@ def make_sales_invoice(source_name):
         if invoice.meta.has_field(fieldname):
             invoice.set(fieldname, value)
     invoice.remarks = f"Real estate sale under Sales Agreement {agreement.name}"
+    from reckon_real_estate.sales_team import set_booking_sales_team
+    set_booking_sales_team(invoice, source.booking)
     invoice.insert()
     source.db_set("sales_invoice", invoice.name)
     for row in source.installments:
