@@ -34,6 +34,13 @@ doc_events = {
     "Collection Entry": {
         "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_payment",
     },
+    "Sales Invoice": {
+        "on_cancel": "reckon_real_estate.events.accounting.cancel_invoice_plans",
+        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_invoice_references",
+    },
+    "Installment Plan": {
+        "on_trash": "reckon_real_estate.events.accounting.unlink_cancelled_sales_invoice",
+    },
 }
 
 scheduler_events = {
@@ -45,5 +52,6 @@ scheduler_events = {
 fixtures = []
 
 doctype_js = {
+    "Sales Invoice": "public/js/sales_invoice.js",
     "Payment Entry": "public/js/payment_entry.js",
 }

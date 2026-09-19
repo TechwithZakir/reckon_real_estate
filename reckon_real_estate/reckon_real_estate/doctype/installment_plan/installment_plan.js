@@ -1,5 +1,9 @@
 frappe.ui.form.on("Installment Plan", {
     refresh(frm) {
+        // Cancel the invoice on the server after this plan enters cancelled state.
+        frm.ignore_doctypes_on_cancel_all = [
+            ...new Set([...(frm.ignore_doctypes_on_cancel_all || []), "Sales Invoice"]),
+        ];
         if (frm.doc.docstatus !== 1) return;
         if (!frm.doc.sales_invoice) frm.add_custom_button(__("Sales Invoice"), () => frappe.call({
             method: "reckon_real_estate.reckon_real_estate.doctype.installment_plan.installment_plan.make_sales_invoice",

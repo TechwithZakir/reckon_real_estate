@@ -1,6 +1,42 @@
 import frappe
 
 
+def cancel_invoice_plans(doc, method=None):
+    if doc.docstatus != 2:
+        return
+    for name in frappe.get_all(
+        "Installment Plan", filters={"sales_invoice": doc.name, "docstatus": 1}, pluck="name"
+    ):
+        # Preserve permissions and the plan's submitted-collection guard.
+        # Any error rolls back the invoice cancellation in the same transaction.
+        frappe.get_doc("Installment Plan", name).cancel()
+
+
+def unlink_cancelled_sales_invoice(doc, method=None):
+    if frappe.get_meta("Sales Invoice").has_field("installment_plan"):
+        _unlink_cancelled_references(doc, "Sales Invoice", "installment_plan")
+
+
+def unlink_cancelled_invoice_references(doc, method=None):
+    _unlink_cancelled_references(doc, "Installment Plan", "sales_invoice")
+    if doc.docstatus != 2:
+        return
+    # Child links must be cleared too, but only on cancelled parent documents.
+    for childtype, parenttype in (
+        ("Installment Schedule", "Installment Plan"),
+        ("Payment Allocation", "Collection Entry"),
+    ):
+        for row in frappe.get_all(
+            childtype, filters={"sales_invoice": doc.name, "parenttype": parenttype},
+            fields=["name", "parent"],
+        ):
+            parent = frappe.get_doc(parenttype, row.parent)
+            if parent.docstatus != 2:
+                continue
+            parent.check_permission("write")
+            frappe.db.set_value(childtype, row.name, "sales_invoice", None)
+
+
 def unlink_cancelled_collection(doc, method=None):
     _unlink_cancelled_references(doc, "Collection Entry", "payment_entry")
 

@@ -60,3 +60,46 @@ class TestPaymentDeletion(unittest.TestCase):
         self.frappe.get_meta.return_value.has_field = lambda field: False
         self.module.unlink_cancelled_payment(self.doc)
         self.frappe.get_all.assert_not_called()
+
+    def test_invoice_cancel_cancels_linked_submitted_plan(self):
+        self.linked.cancel = Mock()
+        self.module.cancel_invoice_plans(self.doc)
+        self.frappe.get_all.assert_called_once_with(
+            "Installment Plan", filters={"sales_invoice": "SOURCE-1", "docstatus": 1}, pluck="name"
+        )
+        self.linked.cancel.assert_called_once_with()
+
+    def test_plan_cancel_failure_propagates_to_invoice(self):
+        self.linked.cancel = Mock(side_effect=ValueError("Submitted collection exists"))
+        with self.assertRaises(ValueError):
+            self.module.cancel_invoice_plans(self.doc)
+
+    def test_draft_invoice_does_not_cancel_plans(self):
+        self.doc.docstatus = 0
+        self.module.cancel_invoice_plans(self.doc)
+        self.frappe.get_all.assert_not_called()
+
+    def test_delete_plan_unlinks_cancelled_invoice(self):
+        self.module.unlink_cancelled_sales_invoice(self.doc)
+        self.assert_cleanup("Sales Invoice", "installment_plan")
+
+    def test_invoice_deletion_clears_header_and_child_links(self):
+        self.linked.docstatus = 2
+        self.frappe.get_all.side_effect = [
+            ["LINK-1"], [SimpleNamespace(name="SCHEDULE-1", parent="LINK-1")],
+            [SimpleNamespace(name="ALLOCATION-1", parent="CE-1")],
+        ]
+        self.module.unlink_cancelled_invoice_references(self.doc)
+        self.frappe.db.set_value.assert_any_call(
+            "Installment Plan", {"name": "LINK-1", "sales_invoice": "SOURCE-1", "docstatus": 2},
+            "sales_invoice", None,
+        )
+        self.frappe.db.set_value.assert_any_call("Installment Schedule", "SCHEDULE-1", "sales_invoice", None)
+        self.frappe.db.set_value.assert_any_call("Payment Allocation", "ALLOCATION-1", "sales_invoice", None)
+
+    def test_invoice_deletion_keeps_active_parent_child_links(self):
+        for status in (0, 1):
+            self.linked.docstatus = status
+            self.frappe.get_all.side_effect = [[], [SimpleNamespace(name="ROW-1", parent="PLAN-1")], []]
+            self.module.unlink_cancelled_invoice_references(self.doc)
+        self.frappe.db.set_value.assert_not_called()

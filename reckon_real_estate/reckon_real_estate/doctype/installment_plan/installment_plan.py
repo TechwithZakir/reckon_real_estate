@@ -49,13 +49,19 @@ class InstallmentPlan(Document):
         set_submitted_status(self, "document_status")
 
     def on_cancel(self):
-        if self.sales_invoice and frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus") != 2:
-            frappe.throw(f"Cancel and delete Sales Invoice {self.sales_invoice} before cancelling this Installment Plan.")
+        if self.sales_invoice:
+            invoice_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
+            if invoice_status == 0:
+                frappe.throw(f"Delete draft Sales Invoice {self.sales_invoice} before cancelling this Installment Plan.")
         collection = frappe.db.sql("""select ce.name from `tabCollection Entry` ce
             join `tabPayment Allocation` pa on pa.parent=ce.name
             where ce.docstatus=1 and pa.installment_plan=%s limit 1""", self.name)
         if collection:
             frappe.throw(f"Submitted Collection Entry exists: {collection[0][0]}. Cancel it first.")
+        if self.sales_invoice and invoice_status == 1:
+            # on_cancel runs after this plan's cancelled state is persisted.
+            # The invoice hook therefore skips this plan, avoiding recursion.
+            frappe.get_doc("Sales Invoice", self.sales_invoice).cancel()
         self.db_set("status", "Cancelled")
         set_cancelled_status(self, "document_status")
 
