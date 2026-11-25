@@ -6,6 +6,8 @@ description: "A real estate ERP vertical on Frappe/ERPNext covering unit booking
 
 # Real Estate ERP on ERPNext: Bookings, Installments, BOQ and Project Profitability
 
+![Banner](banner.svg)
+
 Property developers in Bangladesh juggle unit sales, long installment schedules, contractor bills and project budgets, often across separate spreadsheets. **Reckon Real Estate** is a real estate vertical built by Reckon Technologies Ltd. on Frappe/ERPNext to keep the whole property lifecycle in one ERP.
 
 ## What it covers
